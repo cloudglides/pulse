@@ -1,26 +1,63 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@layer base {
+  body {
+    @apply bg-[#0b0d10] text-[#e6e6e6];
+  }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #3a4051;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4a5060;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .widget {
+    @apply bg-[#12151c] border border-[#1f2430] rounded-[10px] p-6 flex flex-col;
+  }
+
+  .widget-header {
+    @apply text-xs font-semibold uppercase tracking-wider text-[#9aa0aa] mb-4 flex-shrink-0;
+  }
+
+  .widget-content {
+    @apply flex-1 overflow-y-auto;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 text-xs font-medium;
+  }
+
+  .status-ok {
+    @apply text-[#6ee7a8];
+  }
+
+  .status-error {
+    @apply text-[#f87171];
+  }
+
+  .status-warn {
+    @apply text-[#facc15];
+  }
+
+  .text-muted {
+    @apply text-[#9aa0aa];
+  }
+
+  .card-link {
+    @apply hover:text-[#e6e6e6] transition-colors;
+  }
 }

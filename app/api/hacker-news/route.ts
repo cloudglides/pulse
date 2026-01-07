@@ -18,7 +18,11 @@ export async function GET() {
       })
     );
 
-    return Response.json({ stories: stories.filter(Boolean) });
+    return Response.json({ stories: stories.filter(Boolean) }, {
+      headers: {
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400"
+      }
+    });
   } catch (error) {
     console.error("HN Error:", error);
     return Response.json({ stories: [] });

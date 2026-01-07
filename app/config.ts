@@ -4,5 +4,6 @@ export const config = {
   },
   api: {
     pollInterval: 3000,
+    newsInterval: 600000,
   },
 };

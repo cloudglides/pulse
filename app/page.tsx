@@ -30,6 +30,8 @@ interface Repo {
   stars: number;
   forks: number;
   language: string;
+  description: string;
+  url: string;
 }
 
 export default function Home() {
@@ -38,6 +40,8 @@ export default function Home() {
   const [redditPosts, setRedditPosts] = useState<RedditPost[]>([]);
   const [repos, setRepos] = useState<Repo[]>([]);
   const [systemStats, setSystemStats] = useState<any>(null);
+  const [memoryHistory, setMemoryHistory] = useState<number[]>([]);
+  const [diskHistory, setDiskHistory] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,6 +70,19 @@ export default function Home() {
         setRedditPosts(redditData.posts || []);
         setRepos(githubData.repos || []);
         setSystemStats(systemData);
+
+        if (systemData.memory) {
+          setMemoryHistory((prev) => [
+            ...prev.slice(-19),
+            systemData.memory.percent,
+          ]);
+        }
+        if (systemData.disk) {
+          setDiskHistory((prev) => [
+            ...prev.slice(-19),
+            systemData.disk.percent,
+          ]);
+        }
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {
@@ -90,6 +107,19 @@ export default function Home() {
     if (value < 70) return { color: "#6ee7a8", label: "OK", severity: 0 };
     if (value < 85) return { color: "#f0883e", label: "WARNING", severity: 1 };
     return { color: "#f85149", label: "CRITICAL", severity: 2 };
+  };
+
+  const historyToPoints = (history: number[]) => {
+    if (history.length === 0) return "0,80";
+    const points = history
+      .map((value, i) => {
+        const x = (i / Math.max(history.length - 1, 1)) * 200;
+        const y = 80 - (Math.min(Math.max(value, 0), 100) / 100) * 80;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+    console.log("History:", history, "Points:", points);
+    return points;
   };
 
   const diskHealth = getHealthStatus(systemStats?.disk?.percent || 0);
@@ -260,14 +290,14 @@ export default function Home() {
                       </linearGradient>
                     </defs>
                     <polyline
-                      points="0,65 20,55 40,48 60,52 80,45 100,40 120,50 140,42 160,58 180,35 200,28"
+                      points={historyToPoints(memoryHistory)}
                       fill="none"
                       stroke="#6ee7a8"
                       strokeWidth="2"
                       vectorEffect="non-scaling-stroke"
                     />
                     <polygon
-                      points="0,65 20,55 40,48 60,52 80,45 100,40 120,50 140,42 160,58 180,35 200,28 200,80 0,80"
+                      points={`${historyToPoints(memoryHistory)} 200,80 0,80`}
                       fill="url(#memGradient)"
                     />
                   </svg>
@@ -304,14 +334,14 @@ export default function Home() {
                       </linearGradient>
                     </defs>
                     <polyline
-                      points="0,50 20,52 40,51 60,53 80,49 100,52 120,48 140,51 160,49 180,54 200,50"
+                      points={historyToPoints(diskHistory)}
                       fill="none"
                       stroke="#f0883e"
                       strokeWidth="2"
                       vectorEffect="non-scaling-stroke"
                     />
                     <polygon
-                      points="0,50 20,52 40,51 60,53 80,49 100,52 120,48 140,51 160,49 180,54 200,50 200,80 0,80"
+                      points={`${historyToPoints(diskHistory)} 200,80 0,80`}
                       fill="url(#diskGradient)"
                     />
                   </svg>
@@ -322,40 +352,56 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="border border-[#333333] rounded-lg p-6 bg-[#242424]">
-                  <h3 className="text-sm font-bold text-[#999999] uppercase tracking-wider mb-4">
-                    GitHub Repos
-                  </h3>
-                  <div className="space-y-6">
+                <div className="col-span-2">
+                  <div className="grid grid-cols-2 gap-6">
                     {repos.length > 0 ? (
-                      repos.slice(0, 4).map((repo, i) => (
-                        <div
+                      repos.slice(0, 6).map((repo, i) => (
+                        <a
                           key={i}
-                          className="pb-6 border-b border-[#2a2a2a] last:border-0"
+                          href={repo.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="border border-[#333333] rounded-lg p-6 bg-[#242424] hover:border-[#865DFF] transition-all group"
                         >
-                          <h4 className="text-base font-bold text-[#f5f5f5] mb-2 truncate hover:text-[#865DFF] transition-colors">
-                            {repo.name}
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-[#999999]">
+                                cloudglides
+                              </span>
+                            </div>
+                            <svg
+                              className="w-4 h-4 text-[#666666] group-hover:text-[#865DFF] transition-colors"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                          </div>
+                          <h4 className="text-lg font-bold text-[#865DFF] mb-3">
+                            {repo.name.split("/")[1]}
                           </h4>
-                          <div className="flex items-center gap-4 text-xs text-[#888888]">
-                            <span className="flex items-center gap-1">
-                              <span>⭐</span>
-                              <span className="text-[#d5d5d5] font-medium">
-                                {repo.stars}
-                              </span>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span>🍴</span>
-                              <span className="text-[#d5d5d5] font-medium">
-                                {repo.forks}
-                              </span>
-                            </span>
+                          <p className="text-sm text-[#d5d5d5] mb-4 line-clamp-2 h-10">
+                            {repo.description || "No description"}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs">
                             {repo.language && (
-                              <span className="text-[#865DFF]">
+                              <span className="flex items-center gap-1 text-[#d5d5d5]">
+                                <span className="w-2 h-2 rounded-full bg-[#865DFF]" />
                                 {repo.language}
                               </span>
                             )}
+                            <span className="flex items-center gap-1 text-[#888888]">
+                              <span>⭐</span>
+                              {repo.stars}
+                            </span>
                           </div>
-                        </div>
+                        </a>
                       ))
                     ) : (
                       <div className="text-xs text-[#555555]">

@@ -3,6 +3,6 @@ export const config = {
     username: "cloudglides",
   },
   api: {
-    pollInterval: 30000,
+    pollInterval: 3000,
   },
 };

@@ -8,20 +8,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: "#0b0d10",
-        "bg-light": "#0e1116",
-        card: "#12151c",
-        "card-light": "#161a22",
-        border: "#1f2430",
+        bg: "#0f0812",
+        "bg-light": "#191825",
+        card: "#191825",
+        "card-light": "#22152f",
+        border: "#2a1f3d",
         text: "#e6e6e6",
         muted: "#9aa0aa",
         "status-ok": "#6ee7a8",
         "status-error": "#f87171",
         "status-warn": "#facc15",
+        accent: "#865DFF",
       },
       fontFamily: {
-        sans: ["system-ui", "-apple-system", "sans-serif"],
-        mono: ["ui-monospace", "menlo", "monospace"],
+        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', '"Helvetica Neue"', 'sans-serif'],
+        mono: ['"JetBrains Mono"', '"Fira Code"', '"SF Mono"', '"Menlo"', 'monospace'],
       },
       borderRadius: {
         card: "10px",

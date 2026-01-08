@@ -31,6 +31,12 @@
   }
 }
 
+@layer utilities {
+  .animate-slideDown {
+    animation: slideDown 0.3s ease-out;
+  }
+}
+
 @layer base {
   body {
     @apply bg-[#0f0812] text-[#e6e6e6];

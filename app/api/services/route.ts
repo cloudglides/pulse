@@ -22,17 +22,21 @@ async function getServices() {
       })
       .filter(Boolean);
 
-    const services = containers.map((container: any) => ({
-      id: container.ID.slice(0, 12),
-      name: container.Names,
-      image: container.Image,
-      status: container.State,
-      statusRaw: container.Status,
-      createdAt: container.CreatedAt,
-      startedAt: container.StartedAt,
-      cpuUsage: 0,
-      memoryUsage: 0,
-    }));
+    const services = containers.map((container: any) => {
+      const ports = container.Ports ? container.Ports.split(", ").filter((p: string) => p.trim()) : [];
+      return {
+        id: container.ID.slice(0, 12),
+        name: container.Names,
+        image: container.Image,
+        status: container.State,
+        statusRaw: container.Status,
+        createdAt: container.CreatedAt,
+        startedAt: container.StartedAt,
+        ports,
+        cpuUsage: 0,
+        memoryUsage: 0,
+      };
+    });
 
     // Get stats for running containers
     const statsPromises = services

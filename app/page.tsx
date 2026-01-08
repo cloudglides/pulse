@@ -42,6 +42,7 @@ export default function Home() {
   const [systemStats, setSystemStats] = useState<any>(null);
   const [memoryHistory, setMemoryHistory] = useState<number[]>([]);
   const [diskHistory, setDiskHistory] = useState<number[]>([]);
+  const [cpuHistory, setCpuHistory] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -97,16 +98,22 @@ export default function Home() {
           ]);
         }
         if (systemData.disk) {
-          setDiskHistory((prev) => [
-            ...prev.slice(-19),
-            systemData.disk.percent,
-          ]);
+         setDiskHistory((prev) => [
+           ...prev.slice(-19),
+           systemData.disk.percent,
+         ]);
         }
-      } catch (error) {
+        if (systemData.cpu !== undefined) {
+         setCpuHistory((prev) => [
+           ...prev.slice(-19),
+           systemData.cpu,
+         ]);
+        }
+        } catch (error) {
         console.error("Failed to fetch data:", error);
-      } finally {
+        } finally {
         setLoading(false);
-      }
+        }
     };
 
     fetchAllData();
@@ -129,7 +136,11 @@ export default function Home() {
   };
 
   const historyToPoints = (history: number[]) => {
-    if (history.length === 0) return "0,80";
+    if (history.length === 0) return "0,80 200,80";
+    if (history.length === 1) {
+      const y = 80 - (Math.min(Math.max(history[0], 0), 100) / 100) * 80;
+      return `0,${y.toFixed(1)} 200,${y.toFixed(1)}`;
+    }
     const points = history
       .map((value, i) => {
         const x = (i / Math.max(history.length - 1, 1)) * 200;
@@ -137,7 +148,6 @@ export default function Home() {
         return `${x.toFixed(1)},${y.toFixed(1)}`;
       })
       .join(" ");
-    console.log("History:", history, "Points:", points);
     return points;
   };
 
@@ -149,128 +159,247 @@ export default function Home() {
     <div className="h-screen bg-[#1a1a1a] overflow-hidden flex flex-col">
       <div className="flex-1 overflow-y-auto">
         <div className="px-16 py-12 space-y-16">
-          <div className="border-2 border-[#444444] rounded-xl p-12 bg-[#242424]">
-            <div className="grid grid-cols-3 gap-16">
-              <div className="text-center space-y-4">
-                <div className="text-xl font-bold text-[#999999] uppercase tracking-wider">
-                  Memory
-                </div>
-                <div className="flex flex-col items-center">
-                  <div
-                    className="text-8xl font-light"
-                    style={{ color: memoryHealth.color, lineHeight: 1 }}
-                  >
-                    {systemStats?.memory
-                      ? `${systemStats.memory.percent.toFixed(0)}`
-                      : "--"}
-                  </div>
-                  <div className="text-2xl text-[#666666] font-light">%</div>
-                </div>
-                <div
-                  className="text-lg font-bold"
-                  style={{ color: memoryHealth.color }}
-                >
-                  {memoryHealth.label}
-                </div>
-              </div>
-
-              <div className="text-center space-y-4 border-l-2 border-r-2 border-[#444444]">
-                <div className="text-xl font-bold text-[#999999] uppercase tracking-wider">
-                  Disk
-                </div>
-                <div className="flex flex-col items-center">
-                  <div
-                    className="text-8xl font-light"
-                    style={{ color: diskHealth.color, lineHeight: 1 }}
-                  >
-                    {systemStats?.disk
-                      ? `${systemStats.disk.percent.toFixed(0)}`
-                      : "--"}
-                  </div>
-                  <div className="text-2xl text-[#666666] font-light">%</div>
-                </div>
-                <div
-                  className="text-lg font-bold"
-                  style={{ color: diskHealth.color }}
-                >
-                  {diskHealth.label}
-                </div>
-              </div>
-
-              <div className="text-center space-y-4">
-                <div className="text-xl font-bold text-[#999999] uppercase tracking-wider">
-                  Services
-                </div>
-                <div className="flex flex-col items-center">
-                  <div
-                    className="text-8xl font-light text-[#6ee7a8]"
-                    style={{ lineHeight: 1 }}
-                  >
-                    {runningCount}
-                  </div>
-                  <div className="text-2xl text-[#6ee7a8] font-light">
-                    active
-                  </div>
-                </div>
-                <div className="text-lg font-bold text-[#6ee7a8]">Running</div>
-              </div>
-            </div>
-          </div>
-
           {services.length > 0 && (
             <div className="space-y-8">
-              <h2 className="text-3xl font-black text-[#f5f5f5] uppercase tracking-wider">
-                Services
-              </h2>
+              <div className="border-2 border-[#444444] rounded-xl p-12 bg-[#242424]">
+                <div className="grid grid-cols-3 gap-16">
+                  <div className="text-center space-y-4">
+                    <div className="text-xl font-bold text-[#999999] uppercase tracking-wider">
+                      Memory
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <div
+                        className="text-8xl font-light"
+                        style={{ color: memoryHealth.color, lineHeight: 1 }}
+                      >
+                        {systemStats?.memory
+                          ? `${systemStats.memory.percent.toFixed(0)}`
+                          : "--"}
+                      </div>
+                      <div className="text-2xl text-[#666666] font-light">%</div>
+                    </div>
+                    <div
+                      className="text-lg font-bold"
+                      style={{ color: memoryHealth.color }}
+                    >
+                      {memoryHealth.label}
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-8">
-               {services.slice(0, 6).map((s) => (
+                  <div className="text-center space-y-4 border-l-2 border-r-2 border-[#444444]">
+                    <div className="text-xl font-bold text-[#999999] uppercase tracking-wider">
+                      Disk
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <div
+                        className="text-8xl font-light"
+                        style={{ color: diskHealth.color, lineHeight: 1 }}
+                      >
+                        {systemStats?.disk
+                          ? `${systemStats.disk.percent.toFixed(0)}`
+                          : "--"}
+                      </div>
+                      <div className="text-2xl text-[#666666] font-light">%</div>
+                    </div>
+                    <div
+                      className="text-lg font-bold"
+                      style={{ color: diskHealth.color }}
+                    >
+                      {diskHealth.label}
+                    </div>
+                  </div>
+
+                  <div className="text-center space-y-4">
+                    <div className="text-xl font-bold text-[#999999] uppercase tracking-wider">
+                      Services
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <div
+                        className="text-8xl font-light text-[#6ee7a8]"
+                        style={{ lineHeight: 1 }}
+                      >
+                        {runningCount}
+                      </div>
+                      <div className="text-2xl text-[#6ee7a8] font-light">
+                        active
+                      </div>
+                    </div>
+                    <div className="text-lg font-bold text-[#6ee7a8]">Running</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-8">
+                <div className="col-span-2 space-y-6">
+                  <div>
+                    <h2 className="text-lg font-bold text-[#f5f5f5] mb-4 uppercase">
+                      Services
+                    </h2>
+                    <div className="space-y-2">
+                      {services.slice(0, 6).map((s) => (
                  <div
                    key={s.id}
-                   className={`border border-[#333333] rounded-lg p-6 bg-[#242424] hover:border-[#6ee7a8] transition-all group ${
+                   className={`border border-[#333333] rounded-lg p-4 bg-[#242424] hover:border-[#6ee7a8] transition-all group flex items-center justify-between ${
                      s.status !== "running" ? "opacity-60" : ""
                    }`}
                  >
-                   <div className="flex justify-between items-start mb-4">
-                     <h4 className="text-lg font-bold text-[#6ee7a8] truncate">
+                   <div className="flex-1">
+                     <h4 className="text-base font-bold text-[#f5f5f5] mb-1">
                        {s.name}
                      </h4>
-                     <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-semibold ${
-                       s.status === "running"
-                         ? "bg-[#6ee7a8]/20 text-[#6ee7a8]"
-                         : "bg-[#f85149]/20 text-[#f85149]"
-                     }`}>
-                       <div className={`w-1.5 h-1.5 rounded-full ${
-                         s.status === "running"
-                           ? "bg-[#6ee7a8]"
-                           : "bg-[#f85149]"
-                       }`} />
-                       {s.status === "running" ? "Running" : "Stopped"}
-                     </div>
-                   </div>
-                   {s.status === "running" && (
-                     <div className="space-y-3">
-                       <div>
-                         <div className="flex justify-between items-center mb-1">
-                           <span className="text-xs text-[#888888]">CPU Usage</span>
-                           <span className="text-sm font-bold text-[#6ee7a8]">
-                             {s.cpuUsage.toFixed(1)}%
-                           </span>
-                         </div>
-                         <div className="w-full h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
-                           <div
-                             className="h-full bg-[#6ee7a8] transition-all"
-                             style={{ width: `${Math.min(s.cpuUsage, 100)}%` }}
-                           />
-                         </div>
+                     {s.status === "running" && (
+                       <div className="flex items-center gap-4 text-xs">
+                         <span className="text-[#888888]">
+                           CPU: <span className="text-[#6ee7a8] font-semibold">{s.cpuUsage.toFixed(1)}%</span>
+                         </span>
                        </div>
-                     </div>
-                   )}
+                     )}
+                   </div>
+                   <div className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-semibold ${
+                     s.status === "running"
+                       ? "bg-[#6ee7a8]/20 text-[#6ee7a8]"
+                       : "bg-[#f85149]/20 text-[#f85149]"
+                   }`}>
+                     <div className={`w-1.5 h-1.5 rounded-full ${
+                       s.status === "running"
+                         ? "bg-[#6ee7a8]"
+                         : "bg-[#f85149]"
+                     }`} />
+                     {s.status === "running" ? "Running" : "Stopped"}
+                   </div>
                  </div>
                ))}
-              </div>
-            </div>
-          )}
+               </div>
+               </div>
+
+               <div>
+               <h2 className="text-lg font-bold text-[#f5f5f5] mb-4 uppercase">
+               News
+               </h2>
+               <div className="space-y-3">
+               <div>
+                 <h3 className="text-sm font-bold text-[#f5f5f5] mb-2">Hacker News</h3>
+                 <div className="space-y-2">
+                   {hnStories.slice(0, 2).map((story, i) => (
+                     <div
+                       key={i}
+                       className="pb-2 border-b border-[#2a2a2a] last:border-0 text-xs text-[#d5d5d5] hover:text-[#865DFF] transition-colors cursor-pointer"
+                     >
+                       <p className="leading-tight">{story.title}</p>
+                       <div className="text-[#888888] mt-1">{story.score} · {timeAgo(story.time)}</div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+               <div>
+                 <h3 className="text-sm font-bold text-[#f5f5f5] mb-2">Reddit</h3>
+                 <div className="space-y-2">
+                   {redditPosts.slice(0, 2).map((post, i) => (
+                     <a
+                       key={i}
+                       href={post.url}
+                       target="_blank"
+                       rel="noreferrer"
+                       className="pb-2 border-b border-[#2a2a2a] last:border-0 text-xs text-[#d5d5d5] hover:text-[#865DFF] transition-colors block"
+                     >
+                       <p className="leading-tight">{post.title}</p>
+                       <div className="text-[#888888] mt-1">{post.score} · {timeAgo(post.created)}</div>
+                     </a>
+                   ))}
+                 </div>
+               </div>
+               </div>
+               </div>
+               </div>
+
+               <div className="grid grid-rows-3 gap-4 h-full">
+                 <div className="border border-[#333333] rounded-lg p-4 bg-[#242424]">
+                   <h3 className="text-xs font-bold text-[#999999] uppercase tracking-wider mb-3">Memory</h3>
+                   <div className="mb-2">
+                     <span className="text-2xl font-black text-[#6ee7a8]">
+                       {systemStats?.memory ? `${systemStats.memory.percent.toFixed(0)}%` : "--"}
+                     </span>
+                   </div>
+                   <svg viewBox="0 0 200 40" className="w-full h-16">
+                     <defs>
+                       <linearGradient id="memGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                         <stop offset="0%" stopColor="#6ee7a8" stopOpacity="0.4" />
+                         <stop offset="100%" stopColor="#6ee7a8" stopOpacity="0" />
+                       </linearGradient>
+                     </defs>
+                     <polyline
+                       points={historyToPoints(memoryHistory)}
+                       fill="none"
+                       stroke="#6ee7a8"
+                       strokeWidth="2"
+                       vectorEffect="non-scaling-stroke"
+                     />
+                     <polygon
+                       points={`${historyToPoints(memoryHistory)} 200,40 0,40`}
+                       fill="url(#memGradient)"
+                     />
+                   </svg>
+                 </div>
+
+                 <div className="border border-[#333333] rounded-lg p-4 bg-[#242424]">
+                   <h3 className="text-xs font-bold text-[#999999] uppercase tracking-wider mb-3">Disk</h3>
+                   <div className="mb-2">
+                     <span className="text-2xl font-black text-[#f0883e]">
+                       {systemStats?.disk ? `${systemStats.disk.percent.toFixed(0)}%` : "--"}
+                     </span>
+                   </div>
+                   <svg viewBox="0 0 200 40" className="w-full h-16">
+                     <defs>
+                       <linearGradient id="diskGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                         <stop offset="0%" stopColor="#f0883e" stopOpacity="0.4" />
+                         <stop offset="100%" stopColor="#f0883e" stopOpacity="0" />
+                       </linearGradient>
+                     </defs>
+                     <polyline
+                       points={historyToPoints(diskHistory)}
+                       fill="none"
+                       stroke="#f0883e"
+                       strokeWidth="2"
+                       vectorEffect="non-scaling-stroke"
+                     />
+                     <polygon
+                       points={`${historyToPoints(diskHistory)} 200,40 0,40`}
+                       fill="url(#diskGradient)"
+                     />
+                   </svg>
+                 </div>
+
+                 <div className="border border-[#333333] rounded-lg p-4 bg-[#242424]">
+                   <h3 className="text-xs font-bold text-[#999999] uppercase tracking-wider mb-3">CPU</h3>
+                   <div className="mb-2">
+                     <span className="text-2xl font-black text-[#865DFF]">
+                       {systemStats?.cpu ? `${systemStats.cpu.toFixed(1)}%` : "--"}
+                     </span>
+                   </div>
+                   <svg viewBox="0 0 200 40" className="w-full h-16">
+                     <defs>
+                       <linearGradient id="cpuGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                         <stop offset="0%" stopColor="#865DFF" stopOpacity="0.4" />
+                         <stop offset="100%" stopColor="#865DFF" stopOpacity="0" />
+                       </linearGradient>
+                     </defs>
+                     <polyline
+                       points={historyToPoints(cpuHistory)}
+                       fill="none"
+                       stroke="#865DFF"
+                       strokeWidth="2"
+                       vectorEffect="non-scaling-stroke"
+                     />
+                     <polygon
+                       points={`${historyToPoints(cpuHistory)} 200,40 0,40`}
+                       fill="url(#cpuGradient)"
+                     />
+                   </svg>
+                 </div>
+               </div>
+               </div>
+               </div>
+               )}
 
           <div className="space-y-8">
             <h2 className="text-3xl font-black text-[#f5f5f5] uppercase tracking-wider">
@@ -336,109 +465,15 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-
-              <div className="space-y-6">
-                <div className="border border-[#333333] rounded-lg p-4 bg-[#242424]">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-bold text-[#999999] uppercase tracking-wider">
-                      Memory
-                    </h3>
-                    <span className="text-xs text-[#6ee7a8] font-semibold">
-                      {systemStats?.memory
-                        ? `${systemStats.memory.percent.toFixed(0)}%`
-                        : "-- %"}
-                    </span>
-                  </div>
-                  <svg viewBox="0 0 200 40" className="w-full h-20">
-                    <defs>
-                      <linearGradient
-                        id="memGradient"
-                        x1="0%"
-                        y1="0%"
-                        x2="0%"
-                        y2="100%"
-                      >
-                        <stop
-                          offset="0%"
-                          stopColor="#6ee7a8"
-                          stopOpacity="0.3"
-                        />
-                        <stop
-                          offset="100%"
-                          stopColor="#6ee7a8"
-                          stopOpacity="0"
-                        />
-                      </linearGradient>
-                    </defs>
-                    <polyline
-                      points={historyToPoints(memoryHistory)}
-                      fill="none"
-                      stroke="#6ee7a8"
-                      strokeWidth="2"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <polygon
-                      points={`${historyToPoints(memoryHistory)} 200,40 0,40`}
-                      fill="url(#memGradient)"
-                    />
-                  </svg>
-                </div>
-
-                <div className="border border-[#333333] rounded-lg p-4 bg-[#242424]">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-bold text-[#999999] uppercase tracking-wider">
-                      Disk
-                    </h3>
-                    <span className="text-xs text-[#f0883e] font-semibold">
-                      {systemStats?.disk
-                        ? `${systemStats.disk.percent.toFixed(0)}%`
-                        : "-- %"}
-                    </span>
-                  </div>
-                  <svg viewBox="0 0 200 40" className="w-full h-20">
-                    <defs>
-                      <linearGradient
-                        id="diskGradient"
-                        x1="0%"
-                        y1="0%"
-                        x2="0%"
-                        y2="100%"
-                      >
-                        <stop
-                          offset="0%"
-                          stopColor="#f0883e"
-                          stopOpacity="0.3"
-                        />
-                        <stop
-                          offset="100%"
-                          stopColor="#f0883e"
-                          stopOpacity="0"
-                        />
-                      </linearGradient>
-                    </defs>
-                    <polyline
-                      points={historyToPoints(diskHistory)}
-                      fill="none"
-                      stroke="#f0883e"
-                      strokeWidth="2"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <polygon
-                      points={`${historyToPoints(diskHistory)} 200,40 0,40`}
-                      fill="url(#diskGradient)"
-                    />
-                  </svg>
-                </div>
               </div>
-            </div>
 
             <h2 className="text-3xl font-black text-[#f5f5f5] uppercase tracking-wider">
               Repositories
             </h2>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-3 gap-6">
               {repos.length > 0 ? (
-                repos.slice(0, 6).map((repo, i) => (
+                repos.slice(0, 9).map((repo, i) => (
                   <a
                     key={i}
                     href={repo.url}

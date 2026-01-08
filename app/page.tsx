@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { config } from "./config";
+import {
+  SkeletonStatsCard,
+  SkeletonServiceCard,
+  SkeletonChart,
+  SkeletonNewsItem,
+  SkeletonRepoCard,
+} from "./components/Skeleton";
+import { ServiceContextMenu } from "./components/ServiceContextMenu";
 
 interface Service {
   id: string;
@@ -35,6 +43,14 @@ export default function Home() {
   const [diskHistory, setDiskHistory] = useState<number[]>([]);
   const [cpuHistory, setCpuHistory] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    serviceId: string;
+    serviceName: string;
+    status: string;
+  } | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     let lastNewsFetch = 0;
@@ -143,11 +159,46 @@ export default function Home() {
   const memoryHealth = getHealthStatus(systemStats?.memory?.percent || 0);
   const runningCount = services.filter((s) => s.status === "running").length;
 
+  const performAction = async (action: string, containerId: string) => {
+    setActionLoading(true);
+    try {
+      const response = await fetch("/api/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, containerId }),
+      });
+      const data = await response.json();
+      setServices(data.services || []);
+    } catch (error) {
+      console.error("Failed to perform action:", error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleServiceContextMenu = (
+    e: React.MouseEvent,
+    serviceId: string,
+    serviceName: string,
+    status: string
+  ) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      serviceId,
+      serviceName,
+      status,
+    });
+  };
+
   return (
     <div className="h-screen bg-[#1a1a1a] overflow-hidden flex flex-col">
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 md:px-8 lg:px-12 py-4 md:py-6">
-          {services.length > 0 && (
+          {loading ? (
+            <SkeletonStatsCard />
+          ) : services.length > 0 ? (
             <>
               <div className="border border-[#444444] rounded-lg p-4 md:p-6 bg-[#242424] transition-all duration-300">
                 <div className="grid grid-cols-3 gap-3 md:gap-6">
@@ -223,15 +274,23 @@ export default function Home() {
                     Services
                   </h2>
                   <div className="space-y-1.5 max-h-96 overflow-y-auto">
-                    {services.map((s) => (
+                    {loading ? (
+                      <>
+                        {[1, 2, 3].map((i) => (
+                          <SkeletonServiceCard key={i} />
+                        ))}
+                      </>
+                    ) : (
+                      services.map((s) => (
                         <div
                           key={s.id}
                           className={`border border-[#333333] rounded p-2 md:p-3 bg-[#242424] hover:border-[#6ee7a8] transition-all duration-300 ease-out group flex items-center justify-between transform ${
                             s.status !== "running" ? "opacity-60" : ""
-                          }`}
+                          } ${actionLoading ? "opacity-50 pointer-events-none" : ""}`}
                           style={{
                             animation: 'slideIn 0.3s ease-out'
                           }}
+                          onContextMenu={(e) => handleServiceContextMenu(e, s.id, s.name, s.status)}
                         >
                           <div className="flex-1 min-w-0">
                             <h4 className="text-xs md:text-sm font-bold text-[#f5f5f5] mb-0.5 truncate">
@@ -258,130 +317,151 @@ export default function Home() {
                             {s.status === "running" ? "Running" : "Stopped"}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      ))
+                    )}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="border border-[#333333] rounded p-2 md:p-3 bg-[#242424] transition-all duration-300 flex flex-col">
-                    <h3 className="text-xs font-bold text-[#999999] uppercase tracking-wider mb-1">Memory</h3>
-                    <div className="mb-2">
-                      <span className="text-base md:text-xl font-black text-[#6ee7a8] transition-all duration-500">
-                        {systemStats?.memory ? `${systemStats.memory.percent.toFixed(0)}%` : "--"}
-                      </span>
-                    </div>
-                    <svg viewBox="0 0 200 40" className="w-full h-20">
-                      <defs>
-                        <linearGradient id="memGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#6ee7a8" stopOpacity="0.4" />
-                          <stop offset="100%" stopColor="#6ee7a8" stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                      <polyline
-                        points={historyToPoints(memoryHistory)}
-                        fill="none"
-                        stroke="#6ee7a8"
-                        strokeWidth="2"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                      <polygon
-                        points={`${historyToPoints(memoryHistory)} 200,40 0,40`}
-                        fill="url(#memGradient)"
-                      />
-                    </svg>
-                  </div>
+                <div>
+                  <h2 className="text-sm md:text-base font-bold text-[#f5f5f5] mb-2 uppercase">
+                    System Metrics
+                  </h2>
+                  <div className="grid grid-cols-3 gap-2">
+                    {loading ? (
+                    <>
+                      {[1, 2, 3].map((i) => (
+                        <SkeletonChart key={i} />
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <div className="border border-[#333333] rounded p-2 md:p-3 bg-[#242424] transition-all duration-300 flex flex-col">
+                        <h3 className="text-xs font-bold text-[#999999] uppercase tracking-wider mb-1">Memory</h3>
+                        <div className="mb-2">
+                          <span className="text-base md:text-xl font-black text-[#6ee7a8] transition-all duration-500">
+                            {systemStats?.memory ? `${systemStats.memory.percent.toFixed(0)}%` : "--"}
+                          </span>
+                        </div>
+                        <svg viewBox="0 0 200 40" className="w-full h-20">
+                          <defs>
+                            <linearGradient id="memGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#6ee7a8" stopOpacity="0.4" />
+                              <stop offset="100%" stopColor="#6ee7a8" stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                          <polyline
+                            points={historyToPoints(memoryHistory)}
+                            fill="none"
+                            stroke="#6ee7a8"
+                            strokeWidth="2"
+                            vectorEffect="non-scaling-stroke"
+                          />
+                          <polygon
+                            points={`${historyToPoints(memoryHistory)} 200,40 0,40`}
+                            fill="url(#memGradient)"
+                          />
+                        </svg>
+                      </div>
 
-                  <div className="border border-[#333333] rounded p-2 md:p-3 bg-[#242424] transition-all duration-300 flex flex-col">
-                    <h3 className="text-xs font-bold text-[#999999] uppercase tracking-wider mb-1">Disk</h3>
-                    <div className="mb-2">
-                      <span className="text-base md:text-xl font-black text-[#f0883e] transition-all duration-500">
-                        {systemStats?.disk ? `${systemStats.disk.percent.toFixed(0)}%` : "--"}
-                      </span>
-                    </div>
-                    <svg viewBox="0 0 200 40" className="w-full h-20">
-                      <defs>
-                        <linearGradient id="diskGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#f0883e" stopOpacity="0.4" />
-                          <stop offset="100%" stopColor="#f0883e" stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                      <polyline
-                        points={historyToPoints(diskHistory)}
-                        fill="none"
-                        stroke="#f0883e"
-                        strokeWidth="2"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                      <polygon
-                        points={`${historyToPoints(diskHistory)} 200,40 0,40`}
-                        fill="url(#diskGradient)"
-                      />
-                    </svg>
-                  </div>
+                      <div className="border border-[#333333] rounded p-2 md:p-3 bg-[#242424] transition-all duration-300 flex flex-col">
+                        <h3 className="text-xs font-bold text-[#999999] uppercase tracking-wider mb-1">Disk</h3>
+                        <div className="mb-2">
+                          <span className="text-base md:text-xl font-black text-[#f0883e] transition-all duration-500">
+                            {systemStats?.disk ? `${systemStats.disk.percent.toFixed(0)}%` : "--"}
+                          </span>
+                        </div>
+                        <svg viewBox="0 0 200 40" className="w-full h-20">
+                          <defs>
+                            <linearGradient id="diskGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#f0883e" stopOpacity="0.4" />
+                              <stop offset="100%" stopColor="#f0883e" stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                          <polyline
+                            points={historyToPoints(diskHistory)}
+                            fill="none"
+                            stroke="#f0883e"
+                            strokeWidth="2"
+                            vectorEffect="non-scaling-stroke"
+                          />
+                          <polygon
+                            points={`${historyToPoints(diskHistory)} 200,40 0,40`}
+                            fill="url(#diskGradient)"
+                          />
+                        </svg>
+                      </div>
 
-                  <div className="border border-[#333333] rounded p-2 md:p-3 bg-[#242424] transition-all duration-300 flex flex-col">
-                    <h3 className="text-xs font-bold text-[#999999] uppercase tracking-wider mb-1">CPU</h3>
-                    <div className="mb-2">
-                      <span className="text-base md:text-xl font-black text-[#865DFF] transition-all duration-500">
-                        {systemStats?.cpu ? `${systemStats.cpu.toFixed(1)}%` : "--"}
-                      </span>
-                    </div>
-                    <svg viewBox="0 0 200 40" className="w-full h-20">
-                      <defs>
-                        <linearGradient id="cpuGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#865DFF" stopOpacity="0.4" />
-                          <stop offset="100%" stopColor="#865DFF" stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                      <polyline
-                        points={historyToPoints(cpuHistory)}
-                        fill="none"
-                        stroke="#865DFF"
-                        strokeWidth="2"
-                        vectorEffect="non-scaling-stroke"
-                      />
-                      <polygon
-                        points={`${historyToPoints(cpuHistory)} 200,40 0,40`}
-                        fill="url(#cpuGradient)"
-                      />
-                    </svg>
+                      <div className="border border-[#333333] rounded p-2 md:p-3 bg-[#242424] transition-all duration-300 flex flex-col">
+                        <h3 className="text-xs font-bold text-[#999999] uppercase tracking-wider mb-1">CPU</h3>
+                        <div className="mb-2">
+                          <span className="text-base md:text-xl font-black text-[#865DFF] transition-all duration-500">
+                            {systemStats?.cpu ? `${systemStats.cpu.toFixed(1)}%` : "--"}
+                          </span>
+                        </div>
+                        <svg viewBox="0 0 200 40" className="w-full h-20">
+                          <defs>
+                            <linearGradient id="cpuGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stopColor="#865DFF" stopOpacity="0.4" />
+                              <stop offset="100%" stopColor="#865DFF" stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                          <polyline
+                            points={historyToPoints(cpuHistory)}
+                            fill="none"
+                            stroke="#865DFF"
+                            strokeWidth="2"
+                            vectorEffect="non-scaling-stroke"
+                          />
+                          <polygon
+                            points={`${historyToPoints(cpuHistory)} 200,40 0,40`}
+                            fill="url(#cpuGradient)"
+                          />
+                        </svg>
+                      </div>
+                    </>
+                  )}
                   </div>
                 </div>
               </div>
             </>
-          )}
+          ) : null}
 
           <div className="pt-2 space-y-3">
             <h2 className="text-base md:text-2xl font-black text-[#f5f5f5] uppercase tracking-wider">
-              Dashboard
+              News
             </h2>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               <div className="lg:col-span-2 space-y-3">
                 <div>
-                  <h3 className="text-sm md:text-base font-bold text-[#f5f5f5] mb-2">
-                    Hacker News
-                  </h3>
                   <div className="space-y-2">
-                    {hnStories.slice(0, 3).map((story, i) => (
-                      <div
-                        key={i}
-                        className="pb-2 border-b border-[#2a2a2a] last:border-0 group hover:bg-[#242424] -mx-2 px-2 py-1 rounded transition-all duration-200 cursor-pointer"
-                      >
-                        <h3 className="text-xs md:text-sm font-bold text-[#f5f5f5] leading-tight mb-1 group-hover:text-[#865DFF] transition-colors line-clamp-2">
-                          {story.title}
-                        </h3>
-                        <div className="text-xs text-[#888888] space-x-2 flex items-center">
-                          <span className="text-[#6ee7a8] font-semibold">
-                            {story.score}
-                          </span>
-                          <span className="text-[#555555]">·</span>
-                          <span>
-                            {timeAgo(story.time)}
-                          </span>
+                    {loading ? (
+                      <>
+                        {[1, 2, 3].map((i) => (
+                          <SkeletonNewsItem key={i} />
+                        ))}
+                      </>
+                    ) : (
+                      hnStories.slice(0, 3).map((story, i) => (
+                        <div
+                          key={i}
+                          className="pb-2 border-b border-[#2a2a2a] last:border-0 group hover:bg-[#242424] -mx-2 px-2 py-1 rounded transition-all duration-200 cursor-pointer"
+                        >
+                          <h3 className="text-xs md:text-sm font-bold text-[#f5f5f5] leading-tight mb-1 group-hover:text-[#865DFF] transition-colors line-clamp-2">
+                            {story.title}
+                          </h3>
+                          <div className="text-xs text-[#888888] space-x-2 flex items-center">
+                            <span className="text-[#6ee7a8] font-semibold">
+                              {story.score}
+                            </span>
+                            <span className="text-[#555555]">·</span>
+                            <span>
+                              {timeAgo(story.time)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
@@ -394,7 +474,13 @@ export default function Home() {
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {repos.length > 0 ? (
+              {loading ? (
+                <>
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <SkeletonRepoCard key={i} />
+                  ))}
+                </>
+              ) : repos.length > 0 ? (
                 repos.slice(0, 9).map((repo, i) => (
                   <a
                     key={i}
@@ -452,6 +538,20 @@ export default function Home() {
           </div>
         </div>
       </div>
+      {contextMenu && (
+        <ServiceContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          serviceId={contextMenu.serviceId}
+          serviceName={contextMenu.serviceName}
+          status={contextMenu.status}
+          onClose={() => setContextMenu(null)}
+          onStart={(id) => performAction("start", id)}
+          onStop={(id) => performAction("stop", id)}
+          onRestart={(id) => performAction("restart", id)}
+          onRemove={(id) => performAction("remove", id)}
+        />
+      )}
     </div>
   );
 }

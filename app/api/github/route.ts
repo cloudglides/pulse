@@ -3,8 +3,14 @@ import { config } from "@/app/config";
 export async function GET() {
   try {
     const res = await fetch(
-      `https://gh-pinned-repos-tsj7ta5xfhep.deno.dev/?username=${config.github.username}`
+      `https://gh-pinned-repos-tsj7ta5xfhep.deno.dev/?username=${config.github.username}`,
+      { signal: AbortSignal.timeout(5000) }
     );
+    
+    if (!res.ok) {
+      return Response.json({ repos: [] }, { status: 200 });
+    }
+    
     const data = await res.json();
 
     const repos = data.map((repo: any) => ({
@@ -18,6 +24,6 @@ export async function GET() {
 
     return Response.json({ repos });
   } catch (error) {
-    return Response.json({ repos: [], error: "Failed to fetch" }, { status: 500 });
+    return Response.json({ repos: [] }, { status: 200 });
   }
 }

@@ -8,6 +8,13 @@ export async function GET() {
     const uptime = await execAsync("uptime -p || uptime");
     const df = await execAsync("df -h / | tail -1");
     const free = await execAsync("free -h | grep Mem");
+    let cpuUsage = 0;
+    try {
+      const cpuResult = await execAsync("grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}'");
+      cpuUsage = parseFloat(cpuResult.stdout) || 0;
+    } catch {
+      cpuUsage = 0;
+    }
 
     const parseUptime = (str: string) => {
       if (str.includes("up")) {
@@ -41,6 +48,7 @@ export async function GET() {
       uptime: parseUptime(uptime.stdout),
       disk: parseDisk(df.stdout),
       memory: parseMemory(free.stdout),
+      cpu: cpuUsage,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

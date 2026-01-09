@@ -6,14 +6,20 @@ interface LogsViewerProps {
   onClose: () => void;
 }
 
-export function LogsViewer({ serviceId, serviceName, onClose }: LogsViewerProps) {
+export function LogsViewer({
+  serviceId,
+  serviceName,
+  onClose,
+}: LogsViewerProps) {
   const [logs, setLogs] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const response = await fetch(`/api/services/logs?containerId=${serviceId}`);
+        const response = await fetch(
+          `/api/services/logs?containerId=${serviceId}`,
+        );
         const data = await response.json();
         setLogs(data.logs || "No logs available");
       } catch (error) {

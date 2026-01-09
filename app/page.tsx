@@ -12,6 +12,7 @@ import {
 import { ServiceContextMenu } from "./components/ServiceContextMenu";
 import { LogsViewer } from "./components/LogsViewer";
 import { NotificationsContainer } from "./components/Notification";
+import { FeedManager } from "./components/FeedManager";
 
 interface Service {
   id: string;
@@ -23,11 +24,12 @@ interface Service {
   image: string;
 }
 
-interface HNStory {
+interface NewsItem {
   title: string;
-  score: number;
-  by: string;
-  time: number;
+  link: string;
+  description: string;
+  pubDate: string;
+  guid?: string;
 }
 
 interface Repo {
@@ -41,7 +43,7 @@ interface Repo {
 
 export default function Home() {
   const [services, setServices] = useState<Service[]>([]);
-  const [hnStories, setHnStories] = useState<HNStory[]>([]);
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [repos, setRepos] = useState<Repo[]>([]);
   const [systemStats, setSystemStats] = useState<any>(null);
   const [memoryHistory, setMemoryHistory] = useState<number[]>([]);
@@ -65,6 +67,32 @@ export default function Home() {
     Array<{ id: string; message: string; type: "info" | "warning" | "error" | "success" }>
   >([]);
   const [previousServices, setPreviousServices] = useState<Service[]>([]);
+  const [rssFeeds, setRssFeeds] = useState<string[]>(config.rssFeeds);
+  const [feedManagerOpen, setFeedManagerOpen] = useState(false);
+  const [feedsLoaded, setFeedsLoaded] = useState(false);
+
+  useEffect(() => {
+    const savedFeeds = localStorage.getItem("rss_feeds");
+    if (savedFeeds) {
+      const feeds = JSON.parse(savedFeeds);
+      if (feeds.length > 0) {
+        setRssFeeds(feeds);
+      } else {
+        setRssFeeds(config.rssFeeds);
+        localStorage.setItem("rss_feeds", JSON.stringify(config.rssFeeds));
+      }
+    } else {
+      localStorage.setItem("rss_feeds", JSON.stringify(config.rssFeeds));
+    }
+    
+    const savedNews = localStorage.getItem("rss_news");
+    if (savedNews) {
+      const news = JSON.parse(savedNews);
+      setNewsItems(news);
+    }
+    
+    setFeedsLoaded(true);
+  }, []);
 
   useEffect(() => {
     let lastNewsFetch = 0;
@@ -80,8 +108,10 @@ export default function Home() {
           fetch("/api/system"),
         ];
 
-        if (shouldFetchNews) {
-          requests.push(fetch("/api/hacker-news"));
+        if ((shouldFetchNews || newsItems.length === 0) && rssFeeds.length > 0) {
+          const feedParams = new URLSearchParams();
+          rssFeeds.forEach(feed => feedParams.append('feeds', feed));
+          requests.push(fetch(`/api/rss?${feedParams}`));
           lastNewsFetch = now;
         }
 
@@ -95,7 +125,7 @@ export default function Home() {
         ];
 
         if (shouldFetchNews && newsRes.length > 0) {
-          promises.push(newsRes[0].json().catch(() => ({ stories: [] })));
+          promises.push(newsRes[0].json().catch(() => ({ items: [] })));
         }
 
         const data = await Promise.all(promises);
@@ -128,7 +158,9 @@ export default function Home() {
         }
 
         if (shouldFetchNews && newsData.length >= 1) {
-          setHnStories(newsData[0].stories || []);
+          const items = newsData[0].items || [];
+          setNewsItems(items);
+          localStorage.setItem("rss_news", JSON.stringify(items));
         }
 
         if (systemData.memory) {
@@ -156,17 +188,27 @@ export default function Home() {
       }
     };
 
-    fetchAllData();
-    const interval = setInterval(fetchAllData, config.api.pollInterval);
-    return () => clearInterval(interval);
-  }, []);
+    if (feedsLoaded) {
+      if (rssFeeds.length === 0) {
+        setNewsItems([]);
+      } else {
+        fetchAllData();
+        const interval = setInterval(fetchAllData, config.api.pollInterval);
+        return () => clearInterval(interval);
+      }
+    }
+  }, [rssFeeds, feedsLoaded]);
 
-  const timeAgo = (timestamp: number) => {
-    const seconds = Math.floor((Date.now() / 1000 - timestamp) / 1);
-    if (seconds < 60) return `${seconds}s`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-    return `${Math.floor(seconds / 86400)}d`;
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (seconds < 60) return `${seconds}s ago`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return date.toLocaleDateString();
   };
 
   const getHealthStatus = (value: number) => {
@@ -557,9 +599,17 @@ export default function Home() {
           ) : null}
 
           <div className="pt-2 space-y-3">
-            <h2 className="text-base md:text-2xl font-black text-[#f5f5f5] uppercase tracking-wider">
-              News
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-base md:text-2xl font-black text-[#f5f5f5] uppercase tracking-wider">
+                News
+              </h2>
+              <button
+                onClick={() => setFeedManagerOpen(true)}
+                className="px-3 py-1.5 bg-[#865DFF]/20 text-[#865DFF] rounded text-xs font-semibold hover:bg-[#865DFF]/30 transition-colors"
+              >
+                Manage Feeds
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               <div className="lg:col-span-2 space-y-3">
@@ -572,26 +622,26 @@ export default function Home() {
                         ))}
                       </>
                     ) : (
-                      hnStories.slice(0, 3).map((story, i) => (
-                        <div
-                          key={i}
-                          className="pb-2 border-b border-[#2a2a2a] last:border-0 group hover:bg-[#242424] -mx-2 px-2 py-1 rounded transition-all duration-200 cursor-pointer"
-                        >
-                          <h3 className="text-xs md:text-sm font-bold text-[#f5f5f5] leading-tight mb-1 group-hover:text-[#865DFF] transition-colors line-clamp-2">
-                            {story.title}
-                          </h3>
-                          <div className="text-xs text-[#888888] space-x-2 flex items-center">
-                            <span className="text-[#6ee7a8] font-semibold">
-                              {story.score}
-                            </span>
-                            <span className="text-[#555555]">·</span>
-                            <span>
-                              {timeAgo(story.time)}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    )}
+                       newsItems.slice(0, 3).map((item) => (
+                         <a
+                           key={`${item.link}-${item.pubDate}`}
+                           href={item.link}
+                           target="_blank"
+                           rel="noreferrer"
+                           className="pb-2 border-b border-[#2a2a2a] last:border-0 group hover:bg-[#242424] -mx-2 px-2 py-1 rounded transition-all duration-200 cursor-pointer block"
+                         >
+                           <h3 className="text-xs md:text-sm font-bold text-[#f5f5f5] leading-tight mb-1 group-hover:text-[#865DFF] transition-colors line-clamp-2">
+                             {item.title}
+                           </h3>
+                           <p className="text-xs text-[#666666] mb-1 line-clamp-1">
+                             {item.description}
+                           </p>
+                           <div className="text-xs text-[#555555]">
+                             {formatDate(item.pubDate)}
+                           </div>
+                         </a>
+                       ))
+                     )}
                   </div>
                 </div>
               </div>
@@ -689,6 +739,12 @@ export default function Home() {
           onClose={() => setSelectedServiceLogs(null)}
         />
       )}
+      <FeedManager
+        isOpen={feedManagerOpen}
+        onClose={() => setFeedManagerOpen(false)}
+        feeds={rssFeeds}
+        onFeedsChange={setRssFeeds}
+      />
     </div>
   );
 }

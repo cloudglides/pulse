@@ -3,7 +3,12 @@ export const config = {
     username: "cloudglides",
   },
   api: {
-    pollInterval: 3000,
-    newsInterval: 600000,
+    pollInterval: 10000,
+    newsInterval: 1800000,
   },
+  rssFeeds: [
+    "https://news.ycombinator.com/rss",
+    "https://feeds.arstechnica.com/arstechnica/index",
+    "https://xkcd.com/rss.xml",
+  ],
 };

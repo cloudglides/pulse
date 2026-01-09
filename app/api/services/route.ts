@@ -38,7 +38,6 @@ async function getServices() {
       };
     });
 
-    // Get stats for running containers
     const statsPromises = services
       .filter((s: any) => s.status === "running")
       .map(async (service: any) => {

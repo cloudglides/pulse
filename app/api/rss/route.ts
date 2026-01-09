@@ -30,7 +30,6 @@ const parseRSSFeed = async (feedUrl: string): Promise<RSSItem[]> => {
       guid: item.guid?.[0] || item.link?.[0],
     }));
   } catch (error) {
-    console.error(`Error parsing RSS feed ${feedUrl}:`, error);
     return [];
   }
 };
@@ -62,7 +61,6 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
-    console.error("RSS Error:", error);
     return Response.json({ items: [] });
   }
 }

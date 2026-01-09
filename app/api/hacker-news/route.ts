@@ -24,7 +24,6 @@ export async function GET() {
       }
     });
   } catch (error) {
-    console.error("HN Error:", error);
     return Response.json({ stories: [] });
   }
 }

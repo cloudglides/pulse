@@ -15,8 +15,10 @@ import { NotificationsContainer } from "./components/Notification";
 import { FeedManager } from "./components/FeedManager";
 import { LayoutCustomizer } from "./components/LayoutCustomizer";
 import { UptimeDisplay } from "./components/UptimeDisplay";
+import { WebsiteMonitor } from "./components/WebsiteMonitor";
 import { useLayout } from "./hooks/useLayout";
 import { useUptime } from "./hooks/useUptime";
+import { useWebsites } from "./hooks/useWebsites";
 
 interface Service {
   id: string;
@@ -48,6 +50,7 @@ interface Repo {
 export default function Home() {
   const { layout, loaded: layoutLoaded, toggleComponent, reorderComponents, getVisibleComponents } = useLayout();
   const { uptime, trackStatus } = useUptime();
+  const { websites, addWebsite, removeWebsite, checkWebsite } = useWebsites();
   const [services, setServices] = useState<Service[]>([]);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [repos, setRepos] = useState<Repo[]>([]);
@@ -312,8 +315,8 @@ export default function Home() {
     return <div className="h-screen bg-[#1a1a1a]" />;
   }
 
-  const renderSection = (id: "services" | "metrics" | "news" | "repositories") => {
-    const isVisible = layout.components[id].visible;
+  const renderSection = (id: any) => {
+    const isVisible = (layout.components as any)[id]?.visible;
     if (!isVisible) return null;
 
     if (id === "services") {
@@ -678,6 +681,19 @@ export default function Home() {
               </div>
             )}
           </div>
+        </div>
+      );
+    }
+
+    if (id === "websites") {
+      return (
+        <div key="websites">
+          <WebsiteMonitor
+            websites={websites}
+            onAdd={addWebsite}
+            onRemove={removeWebsite}
+            onCheck={checkWebsite}
+          />
         </div>
       );
     }

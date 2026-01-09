@@ -5,6 +5,7 @@ const componentNames: Record<ComponentId, string> = {
   metrics: "System Metrics",
   news: "News",
   repositories: "Repositories",
+  websites: "Website Uptime",
 };
 
 interface LayoutCustomizerProps {

@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 
-export type ComponentId = "services" | "metrics" | "news" | "repositories";
+export type ComponentId =
+  | "services"
+  | "metrics"
+  | "news"
+  | "repositories"
+  | "websites";
 
 export interface LayoutComponent {
   id: ComponentId;
@@ -19,6 +24,7 @@ const defaultLayout: Layout = {
     metrics: { id: "metrics", visible: true, order: 1 },
     news: { id: "news", visible: true, order: 2 },
     repositories: { id: "repositories", visible: true, order: 3 },
+    websites: { id: "websites", visible: true, order: 4 },
   },
   lastUpdated: Date.now(),
 };
@@ -35,10 +41,16 @@ export function useLayout() {
         setLayout({
           ...parsed,
           components: {
-            services: parsed.components.services || defaultLayout.components.services,
-            metrics: parsed.components.metrics || defaultLayout.components.metrics,
+            services:
+              parsed.components.services || defaultLayout.components.services,
+            metrics:
+              parsed.components.metrics || defaultLayout.components.metrics,
             news: parsed.components.news || defaultLayout.components.news,
-            repositories: parsed.components.repositories || defaultLayout.components.repositories,
+            repositories:
+              parsed.components.repositories ||
+              defaultLayout.components.repositories,
+            websites:
+              parsed.components.websites || defaultLayout.components.websites,
           },
         });
       } catch {

@@ -36,9 +36,13 @@ export function useUptime() {
 
           let upSeconds = 0;
           for (let i = 0; i < recent.length; i++) {
-            if (recent[i].status === "up") {
-              const nextTime = recent[i + 1]?.timestamp || now;
-              upSeconds += nextTime - recent[i].timestamp;
+            const current = recent[i];
+            const next = recent[i + 1];
+            const endTime = next ? next.timestamp : now;
+            const duration = endTime - current.timestamp;
+            
+            if (current.status === "up") {
+              upSeconds += duration;
             }
           }
 

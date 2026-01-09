@@ -107,9 +107,9 @@ export function FeedManager({
               {feeds.length === 0 ? (
                 <p className="text-xs text-[#666666]">No feeds added</p>
               ) : (
-                feeds.map((feed, i) => (
+                feeds.map((feed) => (
                   <div
-                    key={i}
+                    key={feed}
                     className="flex items-center justify-between bg-[#1a1a1a] p-2 rounded border border-[#333333] group"
                   >
                     <p className="text-xs text-[#d5d5d5] truncate flex-1">

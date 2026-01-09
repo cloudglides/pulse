@@ -77,6 +77,8 @@ export async function GET() {
   return Response.json(data);
 }
 
+const sanitizeId = (id: string) => id.replace(/[^a-zA-Z0-9\-_]/g, "");
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -89,14 +91,22 @@ export async function POST(request: Request) {
       );
     }
 
+    const safeId = sanitizeId(containerId);
+    if (safeId !== containerId) {
+      return Response.json(
+        { error: "Invalid container ID" },
+        { status: 400 }
+      );
+    }
+
     if (action === "start") {
-      await execAsync(`docker start ${containerId}`);
+      await execAsync(`docker start ${safeId}`);
     } else if (action === "stop") {
-      await execAsync(`docker stop ${containerId}`);
+      await execAsync(`docker stop ${safeId}`);
     } else if (action === "restart") {
-      await execAsync(`docker restart ${containerId}`);
+      await execAsync(`docker restart ${safeId}`);
     } else if (action === "remove") {
-      await execAsync(`docker rm -f ${containerId}`);
+      await execAsync(`docker rm -f ${safeId}`);
     } else {
       return Response.json(
         { error: "Unknown action" },

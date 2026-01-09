@@ -31,16 +31,7 @@ export function useLayout() {
     const saved = localStorage.getItem("app_layout");
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        setLayout({
-          ...parsed,
-          components: {
-            services: parsed.components.services || defaultLayout.components.services,
-            metrics: parsed.components.metrics || defaultLayout.components.metrics,
-            news: parsed.components.news || defaultLayout.components.news,
-            repositories: parsed.components.repositories || defaultLayout.components.repositories,
-          },
-        });
+        setLayout(JSON.parse(saved));
       } catch {
         setLayout(defaultLayout);
       }
@@ -77,7 +68,7 @@ export function useLayout() {
     const reordered = sortedComponents.filter((_, i) => i !== fromIndex);
     reordered.splice(toIndex, 0, moved);
 
-    const newComponents = { ...defaultLayout.components };
+    const newComponents: Record<ComponentId, LayoutComponent> = {};
     reordered.forEach((comp, idx) => {
       newComponents[comp.id] = { ...comp, order: idx };
     });

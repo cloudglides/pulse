@@ -15,7 +15,14 @@ interface RSSFeed {
 
 const parseRSSFeed = async (feedUrl: string): Promise<RSSItem[]> => {
   try {
-    const response = await fetch(feedUrl);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(feedUrl, { signal: controller.signal });
+    clearTimeout(timeout);
+    
+    if (!response.ok) return [];
+    
     const xml = await response.text();
     const parser = new xml2js.Parser();
     const result = await parser.parseStringPromise(xml);

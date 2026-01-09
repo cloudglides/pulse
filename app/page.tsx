@@ -14,7 +14,9 @@ import { LogsViewer } from "./components/LogsViewer";
 import { NotificationsContainer } from "./components/Notification";
 import { FeedManager } from "./components/FeedManager";
 import { LayoutCustomizer } from "./components/LayoutCustomizer";
+import { UptimeDisplay } from "./components/UptimeDisplay";
 import { useLayout } from "./hooks/useLayout";
+import { useUptime } from "./hooks/useUptime";
 
 interface Service {
   id: string;
@@ -45,6 +47,7 @@ interface Repo {
 
 export default function Home() {
   const { layout, loaded: layoutLoaded, toggleComponent, reorderComponents, getVisibleComponents } = useLayout();
+  const { uptime, trackStatus } = useUptime();
   const [services, setServices] = useState<Service[]>([]);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [repos, setRepos] = useState<Repo[]>([]);
@@ -145,9 +148,11 @@ export default function Home() {
             const oldService = previousServices.find((s) => s.id === newService.id);
             if (oldService && oldService.status === "running" && newService.status !== "running") {
               addNotification(`${newService.name} stopped`, "error");
+              trackStatus(newService.id, "down");
             }
             if (oldService && oldService.status !== "running" && newService.status === "running") {
               addNotification(`${newService.name} started`, "success");
+              trackStatus(newService.id, "up");
             }
             if (newService.status === "running" && newService.cpuUsage > 80) {
               addNotification(`${newService.name} high CPU usage: ${newService.cpuUsage.toFixed(1)}%`, "warning");
@@ -155,9 +160,15 @@ export default function Home() {
             if (newService.status === "running" && newService.memoryUsage > 80) {
               addNotification(`${newService.name} high memory usage: ${newService.memoryUsage.toFixed(1)}%`, "warning");
             }
+            if (newService.status === "running") {
+              trackStatus(newService.id, "up");
+            }
           });
           setPreviousServices(newServices);
         } else if (newServices.length > 0) {
+          newServices.forEach((s: Service) => {
+            trackStatus(s.id, s.status === "running" ? "up" : "down");
+          });
           setPreviousServices(newServices);
         }
 
@@ -410,7 +421,8 @@ export default function Home() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center justify-end mt-1">
+                    <div className="flex items-center justify-between mt-1">
+                      <UptimeDisplay percent={uptime[s.id]?.percent || 0} lastDown={uptime[s.id]?.lastDown} />
                       <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold flex-shrink-0 ${
                         s.status === "running"
                           ? "bg-[#6ee7a8]/20 text-[#6ee7a8]"

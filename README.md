@@ -12,7 +12,7 @@
 ---
 
 <p align="center">
-  A Tiny Dashboard For My Homelab
+  A tiny homelab dashboard that tells me if my stuff is alive.
 </p>
 
 <img width="1880" height="1359" alt="image" src="https://github.com/user-attachments/assets/e76925d7-a7c9-4a58-8a92-423d1ac4481f" />

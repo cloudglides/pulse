@@ -1,20 +1,31 @@
 import { exec } from "child_process";
 import { promisify } from "util";
+import { readFileSync, existsSync } from "fs";
 
 const execAsync = promisify(exec);
+
+const isProcMounted = () => existsSync("/host/proc");
+
+const readCpuStat = () => {
+  try {
+    const procPath = isProcMounted() ? "/host/proc/stat" : "/proc/stat";
+    const stat = readFileSync(procPath, "utf-8");
+    const cpuLine = stat.split("\n")[0];
+    const parts = cpuLine.split(/\s+/).slice(1, 5).map(Number);
+    const [user, nice, system, idle] = parts;
+    const usage = (user + nice + system) / (user + nice + system + idle) * 100;
+    return usage || 0;
+  } catch {
+    return 0;
+  }
+};
 
 export async function GET() {
   try {
     const uptime = await execAsync("uptime -p || uptime");
     const df = await execAsync("df -h / | tail -1");
     const free = await execAsync("free -h | grep Mem");
-    let cpuUsage = 0;
-    try {
-      const cpuResult = await execAsync("grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {print usage}'");
-      cpuUsage = parseFloat(cpuResult.stdout) || 0;
-    } catch {
-      cpuUsage = 0;
-    }
+    const cpuUsage = readCpuStat();
 
     const parseUptime = (str: string) => {
       if (str.includes("up")) {

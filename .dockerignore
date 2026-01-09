@@ -1,0 +1,17 @@
+.git
+.gitignore
+node_modules
+npm-debug.log
+.next
+out
+.env.local
+.env.*.local
+.DS_Store
+*.pem
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.pnpm-store
+pnpm-debug.log
